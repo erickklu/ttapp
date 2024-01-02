@@ -1,0 +1,8 @@
+{
+  "name": "TTAPP",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite",
+  "id": "8420dfaf"
+}
