@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router';
+import axios from 'axios';
+
 
 import { IonicVue } from '@ionic/vue';
 
@@ -26,7 +28,9 @@ import './theme/variables.css';
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
-  
+
+// axios.defaults.baseURL = 'http://localhost:3000';
+
 router.isReady().then(() => {
   app.mount('#app');
 });
