@@ -19,9 +19,8 @@
                   <hr>
                 </ion-card-content>
               </ion-card>
-              <!-- <img :src="`data:image/png;base64,${user.image}`" alt="" style="width: 100%;"> -->
               
-              <!-- <img :src="Qr" alt="" style="height: 200px;"> -->
+              <img :src="Qr" alt="" style="height: 400px;">
 
               <ion-button @click="Login()">Cambiar de usuario</ion-button>
 
@@ -40,12 +39,8 @@ import { Storage } from '@ionic/storage';
 import { useRouter } from 'vue-router';
 import qr from 'qrcode';
 
-
-
 const store = new Storage();
-// let Qr = ref("")
-
-
+let Qr = ref("")
 
 onMounted(async () => {
   await store.create();
@@ -57,30 +52,25 @@ onMounted(async () => {
     user.value.apellidos = datos.es_apel;
     user.value.nombres = datos.es_nomb;
     user.value.cedula = datos.es_cedu;
+    user.value.correo = datos.es_correo;
 
-    console.log("estudiantesss", datos.es_nomb);
-    console.log("usuarios", user);
-
-    //   let stJson = JSON.stringify(user.value);
-    // qr.toDataURL(stJson, function (err, code) {
-    //   if (err) return;
-    //   Qr.value = code
-    // });
+    let stJson = JSON.stringify(user.value);
+    qr.toDataURL(stJson, function (err, code) {
+    if (err) return;
+      Qr.value = code
+    });
+    
   } catch (error) {
     console.error("Error al recuperar datos:", error);
   }
 });
 
-async function recuperarDatos() {
-  
-}
-
 const user = ref({
   apellidos: "",
   nombres: "",
-  cedula: ""
+  cedula: "",
+  correo: ""
 });
-
 
 const router = useRouter();
 
