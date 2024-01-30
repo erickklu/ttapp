@@ -1,0 +1,32 @@
+name: Ionic CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Ionic Cloud CLI
+        run: curl -sL https://ionic.io/get-ionic-cloud-cli | bash
+      - name: Install dependencies
+        run: npm install
+      - name: Build app
+        run: npm run build
+      - name: Add Android platform
+        run: npx cap add android
+      - name: Sync Android platform
+        run: npx cap sync android
+      - name: Build AAB and save Android Build ID
+        id: android_build
+        run: |
+          ANDROID_BUILD_ID=$(ionic-cloud build android release --app-id=$APP_ID --commit=$GITHUB_SHA --signing-cert=$SIGNING_CERT --aab-name=app.aab --json --token=$IONIC_TOKEN | jq -r ".buildId")
+          echo "ANDROID_BUILD_ID=$ANDROID_BUILD_ID" >> $GITHUB_OUTPUT
+      - name: Upload AAB
+        uses: actions/upload-artifact@v3
+        with:
+          name: Signed AAB
+          path: ./app.aab
