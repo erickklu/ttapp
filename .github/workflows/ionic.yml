@@ -16,13 +16,17 @@ jobs:
     - name: Install Node.js and npm
       uses: actions/setup-node@v4
       with:
-        node-version: 16  
+        node-version: 16
 
     - name: Install Ionic CLI
       run: npm install -g @ionic/cli
 
     - name: Install dependencies
       run: npm install
+
+    - name: Make gradlew executable
+      run: chmod +x android/gradlew
+      working-directory: ./android
 
     - name: Build app
       run: ionic build
