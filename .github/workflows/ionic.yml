@@ -1,68 +1,58 @@
-name: Ionic Build and Deploy
+name: Ionic CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      APP_ID: ${{ secrets.APP_ID }}
+      GOOGLE_TOKEN: ${{ secrets.GOOGLE_TOKEN }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+      IONIC_TOKEN: ${{ secrets.IONIC_TOKEN }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Install Node.js and npm
-      uses: actions/setup-node@v4
-      with:
-        node-version: 16
-
-    - name: Install Ionic CLI
-      run: npm install -g @ionic/cli
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Make gradlew executable
-      run: chmod +x android/gradlew
-      working-directory: ./android
-
-    - name: Build app
-      run: ionic build
-
-    - name: Copy static files to Android
-      run: ionic capacitor copy android
-
-    - name: Build debug APK
-      run: |
-        cd android
-        ./gradlew assembleDebug
-        cd ..
-
-    - name: Build release APK
-      run: |
-        cd android
-        ./gradlew assembleRelease
-        cd ..
-
-    - name: Upload debug APK
-      uses: actions/upload-artifact@v2
-      with:
-        name: debug-apk
-        path: ./android/app/build/outputs/apk/debug/app-debug.apk
-
-    - name: Upload release APK
-      uses: actions/upload-artifact@v2
-      with:
-        name: release-apk
-        path: ./android/app/build/outputs/apk/release/app-release.apk
-
-    - name: Upload APK to Google Drive
-      uses: google-github-actions/upload-cloud-storage@v0.4.0
-      with:
-        credentials: ${{ secrets.GOOGLE_TOKEN }}
-        path: |
-          ./android/app/build/outputs/apk/debug/app-debug.apk
-          ./android/app/build/outputs/apk/release/app-release.apk
-        destination: apk-uploads
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Ionic Cloud CLI
+        run: curl -sL https://ionic.io/get-ionic-cloud-cli | bash
+      - name: Install dependencies
+        run: npm install
+      - name: Build app
+        run: npm run build
+      - name: Sync Android platform
+        run: npx cap sync android
+      - name: Build AAB and save Android Build ID
+        id: android_build
+        run: |
+          ANDROID_BUILD_ID=$(ionic-cloud build android release --app-id=$APP_ID --commit=$GITHUB_SHA --signing-cert=$SIGNING_CERT --aab-name=app.aab --json --token=$IONIC_TOKEN | jq -r ".buildId")
+          echo "ANDROID_BUILD_ID=$ANDROID_BUILD_ID" >> $GITHUB_OUTPUT
+      - name: Upload AAB
+        uses: actions/upload-artifact@v3
+        with:
+          name: Signed AAB
+          path: ./app.aab
+      - name: Upload AAB to Google Drive
+        uses: google-github-actions/upload-cloud-storage@v0.4.0
+        with:
+          credentials: ${{ secrets.GOOGLE_TOKEN }}
+          path: ./app.aab
+          destination: app.aab
+      - name: Get download link from Google Drive
+        id: download_link
+        run: |
+          DOWNLOAD_LINK=$(curl -X POST -H "Authorization: Bearer ${{ secrets.GOOGLE_TOKEN }}" -H "Content-Type: application/json" -d "{\"role\": \"reader\", \"type\": \"anyone\"}" "https://www.googleapis.com/drive/v3/files/app.aab/permissions" | jq -r ".webContentLink")
+          echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_OUTPUT
+      - name: Send email with download link
+        run: |
+          curl -s --user "${{ secrets.GMAIL_USER }}:${{ secrets.GMAIL_PASS }}" \
+            https://api.mailgun.net/v3/${{ secrets.GMAIL_DOMAIN }}/messages \
+            -F from="${{ secrets.GMAIL_USER }}" \
+            -F to="ericktrejojohanlucio@gmail.com" \
+            -F subject="Aplicación NICODEMO lista para ser descargada" \
+            -F text="A continuación se encunetra el enlace de descarga de la aplicación: ${{ steps.download_link.outputs.DOWNLOAD_LINK }}"
