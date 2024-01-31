@@ -16,7 +16,7 @@ jobs:
     - name: Install Node.js and npm
       uses: actions/setup-node@v4
       with:
-        node-version: 14
+        node-version: 16  # Actualizado a la versión más reciente de Node.js LTS
 
     - name: Install Ionic CLI
       run: npm install -g @ionic/cli
